@@ -20,3 +20,4 @@ migrate help # for more info
 ## Authors
 
 * Andras Laczi, https://github.com/alaczi
+
