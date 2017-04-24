@@ -9,6 +9,7 @@ import (
 	"github.com/mattes/migrate/file"
 	"github.com/mattes/migrate/migrate/direction"
 	pipep "github.com/mattes/migrate/pipe"
+	"time"
 )
 
 // TestMigrate runs some additional tests on Migrate().
@@ -27,11 +28,26 @@ func TestMigrate(t *testing.T) {
 		port,
 		"master",
 	)
+	// retry connection for 2 minutes
+	until := time.Now().Add(time.Minute * 2)
+
+	ticker := time.NewTicker(time.Second)
+	var connection *sql.DB
+	var err error
 	// prepare clean database
-	connection, err := sql.Open("mssql", driverURL)
-	if err != nil {
-		t.Fatal(err)
+	for tick, ok := <-ticker.C; ok; {
+		if tick.After(until) {
+			ticker.Stop()
+		}
+		connection, err = sql.Open("mssql", driverURL)
+		if err == nil {
+			ticker.Stop()
+		}
 	}
+	if err != nil {
+		t.Fatal("Failed to connect to mssql docker container after 2 minutes", err)
+	}
+
 	if _, err := connection.Exec(`
 				DROP TABLE IF EXISTS yolo;
 				DROP TABLE IF EXISTS ` + tableName + `;`); err != nil {
